@@ -4,29 +4,29 @@
 #include <shader_s.h>
 #include <iostream>
 #include <cstdlib>
+#include <Windows.h>
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
 
-const unsigned int SCR_WIDTH = 912;
-const unsigned int SCR_HEIGHT = 1140;
+const unsigned int SCR_WIDTH = 1140;
+const unsigned int SCR_HEIGHT = 912;
 
 const bool DMD_MODE = false;
-
-/* Smoothing Factor */
-const int N = 3;
+const bool LOOP_MODE = true;
+const bool SLOW_MODE = false;
 
 int main()
 {
     /* Tweezer Data Setup */
-
     const int NUM_TWEEZERS = 2;
     const int TOTAL_TIME = 4;
+    const int N = 3; // Smoothing Factor
 
     // lTweezers: Array defining time series of tweezer positions in lattice space.
     int lTweezers[NUM_TWEEZERS][TOTAL_TIME][2] = {
-        {{1, 2}, {2, 2}, {3, 2}, {4, 3}},
-        {{10, 15}, {11, 15}, {12, 15}, {13, 15}}
+        {{1, 2}, {2, 2}, {2, 3}, {3, 3}},
+        {{-4, 5}, {-4, 4}, {-4, 3}, {-3, 3}}
     };
 
     // Vectors defining lattice coordinate system in DMD space.
@@ -67,9 +67,6 @@ int main()
         std::cout << std::endl;
     }
 
-    return 0;
-    
-
     /* GLFW Setup */
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -86,7 +83,7 @@ int main()
         }
         window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "DMD Test Window", monitors[1], NULL);
     }
-    else window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "DMD Test Window", glfwGetPrimaryMonitor(), NULL);
+    else window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "DMD Test Window", NULL, NULL);
 
 
     if (window == NULL)
@@ -138,25 +135,6 @@ int main()
     glEnableVertexAttribArray(2);
 
 
-
-    /*
-    int width, height, nrChannels;
-
-    unsigned char* data = stbi_load("170.bmp", &width, &height, &nrChannels, 0);
-    if (data)
-    {
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-        // Don't forget to deallocate texture array!
-        glGenerateMipmap(GL_TEXTURE_2D);
-    }
-    else
-    {
-        std::cout << "Failed to load texture" << std::endl;
-    }
-    stbi_image_free(data);
-    */
-
-
     GLubyte** textureArrays = new GLubyte * [3];
     textureArrays[0] = new GLubyte[SCR_WIDTH * SCR_HEIGHT * 3];
     textureArrays[1] = new GLubyte[SCR_WIDTH * SCR_HEIGHT * 3];
@@ -175,6 +153,7 @@ int main()
             textureArrays[2][i * SCR_WIDTH * 3 + j * 3 + 2] = (GLubyte)255;
         }
     }
+    
 
     unsigned int texture;
     glGenTextures(1, &texture);
@@ -188,44 +167,37 @@ int main()
     int frames[] = {0, 0, 0, 0, 0, 0};
     while (!glfwWindowShouldClose(window))
     {
+        if (SLOW_MODE) Sleep(1000);
+        if (LOOP_MODE) iter = iter % (N * (TOTAL_TIME - 1) + 1);
+
         processInput(window);
 
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        /*
-        int color;
-        if (iter % 3 == 0) color = 0;
-        if (iter % 3 == 1) color = 170;
-        if (iter % 3 == 2) color = 255;
-        
-
-        int i = iter / SCR_WIDTH;
-        int j = iter % SCR_WIDTH;
-
-        for (int i = 0; i < SCR_HEIGHT; i++) {
+        for (int i = 0; i < SCR_HEIGHT; i++)
+        {
             for (int j = 0; j < SCR_WIDTH; j++) {
-                textureArrays[0][i * SCR_WIDTH * 3 + j * 3] = (GLubyte)color;
-                textureArrays[0][i * SCR_WIDTH * 3 + j * 3 + 1] = (GLubyte)color;
-                textureArrays[0][i * SCR_WIDTH * 3 + j * 3 + 2] = (GLubyte)color;
+                textureArrays[0][i * SCR_WIDTH * 3 + j * 3] = (GLubyte)0;
+                textureArrays[0][i * SCR_WIDTH * 3 + j * 3 + 1] = (GLubyte)0;
+                textureArrays[0][i * SCR_WIDTH * 3 + j * 3 + 2] = (GLubyte)0;
             }
         }
-        */
-
-        // 6 frames; white, grey, black; choose randomly; wait 5-10 seconds
-        if (iter % 300 == 0) {
-            std::cout << "Displaying sequence: ";
-            for (int i = 0; i < 6; i++) {
-                frames[i] = rand() % 3;
-                std::cout << frames[i];
+        if (iter < (N * (TOTAL_TIME - 1) + 1)) {
+            for (int i = 0; i < NUM_TWEEZERS; i++) {
+                int x = (int)moves[i][iter][0];
+                int y = (int)moves[i][iter][1];
+                for (int dx = -3; dx <= 3; dx++) {
+                    for (int dy = -3; dy <= 3; dy++) {
+                        textureArrays[0][(x + dx) * SCR_WIDTH * 3 + (y + dy) * 3] = (GLubyte)255;
+                        textureArrays[0][(x + dx) * SCR_WIDTH * 3 + (y + dy) * 3 + 1] = (GLubyte)255;
+                        textureArrays[0][(x + dx) * SCR_WIDTH * 3 + (y + dy) * 3 + 2] = (GLubyte)255;
+                    }
+                }
             }
-            std::cout << std::endl;
         }
 
-        if (iter % 300 < 6) {
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, textureArrays[frames[iter % 6]]);
-        }
-        else glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, textureArrays[0]);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, textureArrays[0]);
 
         glGenerateMipmap(GL_TEXTURE_2D);
 
