@@ -22,7 +22,7 @@ int main()
     /* Tweezer Data Setup */
     const int NUM_TWEEZERS = 3;
     const int TOTAL_TIME = 14;
-    const int N = 3; // Smoothing Factor
+    const int N = 30; // Smoothing Factor
 
     // lTweezers: Array defining time series of tweezer positions in lattice space.
     int lTweezers[NUM_TWEEZERS][TOTAL_TIME][2] = {
@@ -191,9 +191,9 @@ int main()
                 int y = (int)moves[i][(iter * 24) + j][1];
                 for (int dx = -5; dx <= 5; dx++) {
                     for (int dy = -5; dy <= 5; dy++) {
-                        if (j < 8) textureArrays[0][(x + dx) * SCR_WIDTH * 3 + (y + dy) * 3] += (GLubyte) pow(2, j % 8);
-                        else if (j < 16) textureArrays[0][(x + dx) * SCR_WIDTH * 3 + (y + dy) * 3 + 1] += (GLubyte) pow(2, j % 8);
-                        else textureArrays[0][(x + dx) * SCR_WIDTH * 3 + (y + dy) * 3 + 2] += (GLubyte) pow(2, j % 8);
+                        if (j < 8) textureArrays[0][(x + dx) * SCR_WIDTH * 3 + (y + dy) * 3] += (GLubyte) pow(2, 7 - (j % 8));
+                        else if (j < 16) textureArrays[0][(x + dx) * SCR_WIDTH * 3 + (y + dy) * 3 + 1] += (GLubyte) pow(2, 7 - (j % 8));
+                        else textureArrays[0][(x + dx) * SCR_WIDTH * 3 + (y + dy) * 3 + 2] += (GLubyte) pow(2, 7 - (j % 8));
                     }
                 }
             }
