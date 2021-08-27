@@ -5,6 +5,7 @@
 #include <iostream>
 #include <cstdlib>
 #include <Windows.h>
+#include <math.h>
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
@@ -14,19 +15,20 @@ const unsigned int SCR_HEIGHT = 912;
 
 const bool DMD_MODE = false;
 const bool LOOP_MODE = true;
-const bool SLOW_MODE = false;
+const bool SLOW_MODE = true;
 
 int main()
 {
     /* Tweezer Data Setup */
-    const int NUM_TWEEZERS = 2;
-    const int TOTAL_TIME = 4;
+    const int NUM_TWEEZERS = 3;
+    const int TOTAL_TIME = 14;
     const int N = 3; // Smoothing Factor
 
     // lTweezers: Array defining time series of tweezer positions in lattice space.
     int lTweezers[NUM_TWEEZERS][TOTAL_TIME][2] = {
-        {{1, 2}, {2, 2}, {2, 3}, {3, 3}},
-        {{-4, 5}, {-4, 4}, {-4, 3}, {-3, 3}}
+        {{1, 2}, {2, 2}, {2, 3}, {3, 3}, {3, 4}, {3, 5}, {4, 5}, {4, 6}, {4, 7}, {5, 7}, {6, 7}, {7, 7}, {6, 7}, {6, 6}},
+        {{-2, -11}, {-3, -11}, {-3, -12}, {-2, -12}, {-1, -12}, {0, -12}, {0, -11}, {0, -10}, {1, -10}, {0, -10}, {-1, -10}, {-2, -10}, {-2, -11}, {-2, -12}},
+        {{9, 9}, {9, 9}, {9, 9}, {9, 9}, {9, 9}, {9, 9}, {9, 9}, {9, 9}, {9, 9}, {9, 9}, {9, 9}, {9, 9}, {9, 9}, {9, 9}}
     };
 
     // Vectors defining lattice coordinate system in DMD space.
@@ -168,7 +170,7 @@ int main()
     while (!glfwWindowShouldClose(window))
     {
         if (SLOW_MODE) Sleep(1000);
-        if (LOOP_MODE) iter = iter % (N * (TOTAL_TIME - 1) + 1);
+        if (LOOP_MODE && iter * 24 > (N * (TOTAL_TIME - 1) + 1)) iter = 0;
 
         processInput(window);
 
@@ -183,15 +185,15 @@ int main()
                 textureArrays[0][i * SCR_WIDTH * 3 + j * 3 + 2] = (GLubyte)0;
             }
         }
-        if (iter < (N * (TOTAL_TIME - 1) + 1)) {
-            for (int i = 0; i < NUM_TWEEZERS; i++) {
-                int x = (int)moves[i][iter][0];
-                int y = (int)moves[i][iter][1];
-                for (int dx = -3; dx <= 3; dx++) {
-                    for (int dy = -3; dy <= 3; dy++) {
-                        textureArrays[0][(x + dx) * SCR_WIDTH * 3 + (y + dy) * 3] = (GLubyte)255;
-                        textureArrays[0][(x + dx) * SCR_WIDTH * 3 + (y + dy) * 3 + 1] = (GLubyte)255;
-                        textureArrays[0][(x + dx) * SCR_WIDTH * 3 + (y + dy) * 3 + 2] = (GLubyte)255;
+        for (int i = 0; i < NUM_TWEEZERS; i++) {
+            for (int j = 0; j < 24 && (iter * 24) + j < (N * (TOTAL_TIME - 1) + 1); j++) {
+                int x = (int)moves[i][(iter * 24) + j][0];
+                int y = (int)moves[i][(iter * 24) + j][1];
+                for (int dx = -5; dx <= 5; dx++) {
+                    for (int dy = -5; dy <= 5; dy++) {
+                        if (j < 8) textureArrays[0][(x + dx) * SCR_WIDTH * 3 + (y + dy) * 3] += (GLubyte) pow(2, j % 8);
+                        else if (j < 16) textureArrays[0][(x + dx) * SCR_WIDTH * 3 + (y + dy) * 3 + 1] += (GLubyte) pow(2, j % 8);
+                        else textureArrays[0][(x + dx) * SCR_WIDTH * 3 + (y + dy) * 3 + 2] += (GLubyte) pow(2, j % 8);
                     }
                 }
             }
