@@ -11,21 +11,83 @@ void processInput(GLFWwindow* window);
 const unsigned int SCR_WIDTH = 912;
 const unsigned int SCR_HEIGHT = 1140;
 
+const bool DMD_MODE = false;
+
+/* Smoothing Factor */
+const int N = 3;
+
 int main()
 {
+    /* Tweezer Data Setup */
+
+    const int NUM_TWEEZERS = 2;
+    const int TOTAL_TIME = 4;
+
+    // lTweezers: Array defining time series of tweezer positions in lattice space.
+    int lTweezers[NUM_TWEEZERS][TOTAL_TIME][2] = {
+        {{1, 2}, {2, 2}, {3, 2}, {4, 3}},
+        {{10, 15}, {11, 15}, {12, 15}, {13, 15}}
+    };
+
+    // Vectors defining lattice coordinate system in DMD space.
+    float vec1[] = { 17.3, 10 };
+    float vec2[] = { 17.3, -10 };
+    float center[] = { SCR_WIDTH / 2, SCR_HEIGHT / 2 };
+
+    // dTweezers: Array defining time series of tweezer positions in DMD space.
+    float dTweezers[NUM_TWEEZERS][TOTAL_TIME][2];
+    for (int i = 0; i < NUM_TWEEZERS; i++) {
+        for (int j = 0; j < TOTAL_TIME; j++) {
+            dTweezers[i][j][0] = center[0] + (lTweezers[i][j][0] * vec1[0]) + (lTweezers[i][j][1] * vec2[0]);
+            dTweezers[i][j][1] = center[1] + (lTweezers[i][j][0] * vec1[1]) + (lTweezers[i][j][1] * vec2[1]);
+        }
+    }
+
+    // moves: Array defining smoothed time series of tweezer positions in DMD space.
+    float moves[NUM_TWEEZERS][N * (TOTAL_TIME - 1) + 1][2];
+    for (int i = 0; i < NUM_TWEEZERS; i++) {
+        for (int j = 0; j < TOTAL_TIME - 1; j++) {
+            float xDif = (dTweezers[i][j + 1][0] - dTweezers[i][j][0]) / (float) N;
+            float yDif = (dTweezers[i][j + 1][1] - dTweezers[i][j][1]) / (float) N;
+            for (int k = 0; k < N; k++) {
+                moves[i][j * N + k][0] = dTweezers[i][j][0] + xDif * k;
+                moves[i][j * N + k][1] = dTweezers[i][j][1] + yDif * k;
+            }
+            moves[i][(j + 1) * N][0] = dTweezers[i][TOTAL_TIME - 1][0];
+            moves[i][(j + 1) * N][1] = dTweezers[i][TOTAL_TIME - 1][1];
+        }
+    }
+
+    for (int i = 0; i < NUM_TWEEZERS; i++) {
+        std::cout << "Tweezer " << std::to_string(i + 1) << ": ";
+        for (int j = 0; j <  N * (TOTAL_TIME - 1) + 1; j++) {
+            std::cout << "(" << std::to_string(moves[i][j][0]) << "," << std::to_string(moves[i][j][1]) << "); ";
+        }
+        std::cout << std::endl;
+        std::cout << std::endl;
+    }
+
+    return 0;
+    
+
+    /* GLFW Setup */
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    int count;
-    GLFWmonitor** monitors = glfwGetMonitors(&count);
-    if (count < 2) {
-        std::cout << "DMD Not Connected" << std::endl;
-        return -1;
+    GLFWwindow* window;
+    if (DMD_MODE) {
+        int count;
+        GLFWmonitor** monitors = glfwGetMonitors(&count);
+        if (count < 2) {
+            std::cout << "DMD Not Connected" << std::endl;
+            return -1;
+        }
+        window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "DMD Test Window", monitors[1], NULL);
     }
+    else window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "DMD Test Window", glfwGetPrimaryMonitor(), NULL);
 
-    GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "DMD Test Window", monitors[1], NULL);
 
     if (window == NULL)
     {
@@ -186,6 +248,7 @@ int main()
     glDeleteBuffers(1, &EBO);
 
     glfwTerminate();
+
     return 0;
 }
 
