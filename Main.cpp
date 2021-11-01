@@ -1,6 +1,5 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
-#include <stb_image.h>
 #include <shader_s.h>
 #include <iostream>
 #include <cstdlib>
@@ -20,47 +19,83 @@ const unsigned int SCR_HEIGHT = 912;
     // DMD_MODE: Requires a secondary monitor to be connected and sends frames to this monitor.
     // DMD_COORD_MODE: Uses rowAlgorithm and colAlgorithm to switch to DMD coordinates.
     // LOOP_MODE: Loop the sequence of RGB images; useful for debugging.
+    // LOOP_TEST_MODE: Keep the window open and display new sequences of images between WAIT_LOWER and WAIT_UPPER seconds.
     // SLOW_MODE: Wait between displaying each subsequent frame; useful for debugging.
 const bool DMD_MODE = false;
-const bool DMD_COORD_MODE = false;
-const bool LOOP_MODE = true;
+const bool DMD_COORD_MODE = true;
+const bool LOOP_MODE = false;
+const bool LOOP_TEST_MODE = true;
 const bool SLOW_MODE = true;
 
+const int REFRESH_RATE = 60;
+const int WAIT_LOWER = 5;
+const int WAIT_UPPER = 10;
+
+// Tweezer configuration:
+    // NUM_TWEEZERS: The number of tweezers to be moved by generated frames.
+    // MAX_TIME: The maximum number of total moves between lattice sites (defines the amouunt of memory to allocate in lTweezers).
+    // N: Smoothing factor defining the number of binary frames that should be generated for a move between two consecutive lattice sites.
+    // INITIAL_SQUARE_SIDE: Determines the size of the area in which tweezers can initially spawn.
+const int NUM_TWEEZERS = 400;
+const int MAX_TIME = 30;
+const int N = 10;
+const int INITIAL_SQUARE_SIDE = 40;
+
+// Lattice configuration: vec1, vec2, and center define the lattice coordinate system in DMD space.
+const float vec1[] = { 8.66, 5 };
+const float vec2[] = { 8.66, -5 };
+const float center[] = { SCR_WIDTH / 2, SCR_HEIGHT / 2 };
+
 int rowAlgorithm(int DMDRow, int DMDCol) {
-    return -DMDCol + (int) (DMDRow / 2);
+    return -DMDCol + (int)(DMDRow / 2);
 }
 
 int columnAlgorithm(int DMDRow, int DMDCol) {
     return ((int)((DMDRow + 1) / 2)) + DMDCol;
 }
 
-int main()
-{
-    // Tweezer configuration:
-        // NUM_TWEEZERS: The number of tweezers to be moved by generated frames.
-        // MAX_TIME: The maximum number of total moves between lattice sites (defines the amouunt of memory to allocate in lTweezers).
-        // N: Smoothing factor defining the number of binary frames that should be generated for a move between two consecutive lattice sites.
-    const int NUM_TWEEZERS = 10;
-    const int MAX_TIME = 15;
-    const int N = 3;
-
-    // tweezerPositions: binary array defining starting positions of tweezers
-    bool tweezerPositions[5][5];
-    for (int i = 0; i < 5; i++) {
-        for (int j = 0; j < 5; j++) {
+// Generates frames in moves and returns the total number generated.
+int generateFrames(bool** tweezerPositions, int*** lTweezers, float*** dTweezers, float*** moves) {
+    // Initialize tweezerPositions
+    for (int i = 0; i < INITIAL_SQUARE_SIDE; i++) {
+        tweezerPositions[i] = new bool[INITIAL_SQUARE_SIDE];
+    }
+    for (int i = 0; i < INITIAL_SQUARE_SIDE; i++) {
+        for (int j = 0; j < INITIAL_SQUARE_SIDE; j++) {
             tweezerPositions[i][j] = 0;
         }
     }
 
-    // lTweezers: Array defining time series of tweezer positions in lattice space.
-    int lTweezers[NUM_TWEEZERS][MAX_TIME][2];
+    // Initialize lTweezers
+    for (int i = 0; i < NUM_TWEEZERS; i++) {
+        lTweezers[i] = new int* [MAX_TIME];
+        for (int j = 0; j < MAX_TIME; j++) {
+            lTweezers[i][j] = new int[2];
+        }
+    }
+
+    // Initialize dTweezers
+    for (int i = 0; i < NUM_TWEEZERS; i++) {
+        dTweezers[i] = new float* [MAX_TIME];
+        for (int j = 0; j < MAX_TIME; j++) {
+            dTweezers[i][j] = new float[2];
+        }
+    }
+
+    // Initialize moves
+    for (int i = 0; i < NUM_TWEEZERS; i++) {
+        moves[i] = new float* [N * (MAX_TIME - 1) + 1];
+        for (int j = 0; j < N * (MAX_TIME - 1) + 1; j++) {
+            moves[i][j] = new float[2];
+        }
+    }
 
     // Populate tweezerPositions and lTweezers with initial positions of tweezers.
     srand(time(NULL));
     int count = 0;
     while (count < NUM_TWEEZERS) {
-        int i = rand() % 5;
-        int j = rand() % 5;
+        int i = rand() % INITIAL_SQUARE_SIDE;
+        int j = rand() % INITIAL_SQUARE_SIDE;
         if (tweezerPositions[i][j] == 0) {
             tweezerPositions[i][j] = 1;
             lTweezers[count][0][0] = i;
@@ -72,8 +107,8 @@ int main()
     // Compute center-of-mass in x- and y- directions.
     int COM_x = 0;
     int COM_y = 0;
-    for (int i = 0; i < 5; i++) {
-        for (int j = 0; j < 5; j++) {
+    for (int i = 0; i < INITIAL_SQUARE_SIDE; i++) {
+        for (int j = 0; j < INITIAL_SQUARE_SIDE; j++) {
             if (tweezerPositions[i][j] == 1) {
                 COM_x += i;
                 COM_y += j;
@@ -85,13 +120,14 @@ int main()
 
     int currentFrame = 0;
     while (true) {
-        /* Print tweezerPositions */
-        for (int i = 0; i < 5; i++) {
-            for (int j = 0; j < 5; j++) {
+        /* Print tweezerPositions
+        for (int i = 0; i < INITIAL_SQUARE_SIDE; i++) {
+            for (int j = 0; j < INITIAL_SQUARE_SIDE; j++) {
                 std::cout << tweezerPositions[i][j] << ", ";
             }
             std::cout << '\n';
         }
+        */
 
         int numMoves = 0;
         for (int i = 0; i < NUM_TWEEZERS; i++) {
@@ -154,41 +190,25 @@ int main()
             lTweezers[i][currentFrame + 1][0] = row;
             lTweezers[i][currentFrame + 1][1] = col;
         }
-        std::cout << "number of moves: " << numMoves << '\n';
+        /* std::cout << "number of moves: " << numMoves << '\n'; */
         if (numMoves == 0) break;
         currentFrame++;
     }
     int numFrames = currentFrame + 1;
 
-    // Lattice configuration: vec1, vec2, and center define the lattice coordinate system in DMD space.
-    float vec1[] = { 17.3, 10 };
-    float vec2[] = { 17.3, -10 };
-    float center[] = { SCR_WIDTH / 2, SCR_HEIGHT / 2 };
-
-    /*
-    // lTweezers: Array defining time series of tweezer positions in lattice space.
-    int lTweezers[NUM_TWEEZERS][numFrames][2] = {
-        {{1, 2}, {2, 2}, {2, 3}, {3, 3}, {3, 4}, {3, 5}, {4, 5}, {4, 6}, {4, 7}, {5, 7}, {6, 7}, {7, 7}, {6, 7}, {6, 6}},
-        {{-2, -11}, {-3, -11}, {-3, -12}, {-2, -12}, {-1, -12}, {0, -12}, {0, -11}, {0, -10}, {1, -10}, {0, -10}, {-1, -10}, {-2, -10}, {-2, -11}, {-2, -12}},
-        {{9, 9}, {9, 9}, {9, 9}, {9, 9}, {9, 9}, {9, 9}, {9, 9}, {9, 9}, {9, 9}, {9, 9}, {9, 9}, {9, 9}, {9, 9}, {9, 9}}
-    };
-    */
-
-    // dTweezers: Array defining time series of tweezer positions in DMD space, computed using lattice configuration parameters (vec1, vec2, center).
-    float dTweezers[NUM_TWEEZERS][MAX_TIME][2];
     for (int i = 0; i < NUM_TWEEZERS; i++) {
         for (int j = 0; j < numFrames; j++) {
+            lTweezers[i][j][0] -= INITIAL_SQUARE_SIDE / 2;
+            lTweezers[i][j][1] -= INITIAL_SQUARE_SIDE / 2;
             dTweezers[i][j][0] = center[0] + (lTweezers[i][j][0] * vec1[0]) + (lTweezers[i][j][1] * vec2[0]);
             dTweezers[i][j][1] = center[1] + (lTweezers[i][j][0] * vec1[1]) + (lTweezers[i][j][1] * vec2[1]);
         }
     }
 
-    // moves: Array defining smoothed time series of tweezer positions in DMD space, generated by smoothing dTweezers using the smoothing factor N.
-    float moves[NUM_TWEEZERS][N * (MAX_TIME - 1) + 1][2];
     for (int i = 0; i < NUM_TWEEZERS; i++) {
         for (int j = 0; j < numFrames - 1; j++) {
-            float xDif = (dTweezers[i][j + 1][0] - dTweezers[i][j][0]) / (float) N;
-            float yDif = (dTweezers[i][j + 1][1] - dTweezers[i][j][1]) / (float) N;
+            float xDif = (dTweezers[i][j + 1][0] - dTweezers[i][j][0]) / (float)N;
+            float yDif = (dTweezers[i][j + 1][1] - dTweezers[i][j][1]) / (float)N;
             for (int k = 0; k < N; k++) {
                 moves[i][j * N + k][0] = dTweezers[i][j][0] + xDif * k;
                 moves[i][j * N + k][1] = dTweezers[i][j][1] + yDif * k;
@@ -198,15 +218,38 @@ int main()
         }
     }
 
+    /*
     // Log the sequence of moves to the console.
     for (int i = 0; i < NUM_TWEEZERS; i++) {
         std::cout << "Tweezer " << std::to_string(i + 1) << ": ";
-        for (int j = 0; j <  N * (numFrames - 1) + 1; j++) {
+        for (int j = 0; j < N * (numFrames - 1) + 1; j++) {
             std::cout << "(" << std::to_string(moves[i][j][0]) << "," << std::to_string(moves[i][j][1]) << "); ";
         }
         std::cout << std::endl;
         std::cout << std::endl;
     }
+    */
+    return numFrames;
+}
+
+void freeFrames(bool** tweezerPositions, int*** lTweezers, float*** dTweezers, float*** moves) {
+    // TODO: IMPLEMENT THIS
+}
+
+int main()
+{
+    // tweezerPositions: binary array defining starting positions of tweezers
+    // lTweezers: Array defining time series of tweezer positions in lattice space.
+    // dTweezers: Array defining time series of tweezer positions in DMD space, computed using lattice configuration parameters (vec1, vec2, center).
+    // moves: Array defining smoothed time series of tweezer positions in DMD space, generated by smoothing dTweezers using the smoothing factor N.
+
+
+    bool** tweezerPositions = new bool*[INITIAL_SQUARE_SIDE];
+    int*** lTweezers = new int**[NUM_TWEEZERS];
+    float*** dTweezers = new float**[NUM_TWEEZERS];
+    float*** moves = new float**[NUM_TWEEZERS];
+
+    int numFrames = generateFrames(tweezerPositions, lTweezers, dTweezers, moves);
 
     // GLFW Setup
     glfwInit();
@@ -289,7 +332,7 @@ int main()
             dmdTextureArray[i * SCR_WIDTH * 3 + j * 3 + 2] = (GLubyte)0;
         }
     }
-    
+
     unsigned int texture;
     glGenTextures(1, &texture);
     glBindTexture(GL_TEXTURE_2D, texture);
@@ -299,16 +342,38 @@ int main()
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     int iter = 0;
-    int frames[] = {0, 0, 0, 0, 0, 0};
+    int frames[] = { 0, 0, 0, 0, 0, 0 };
+
+    // waitTime, waitFrames, and waiting are only used in LOOP_TEST_MODE
+    int waitTime = 0;
+    int waitFrames = 0;
+    bool waiting = false;
     while (!glfwWindowShouldClose(window))
     {
-        if (SLOW_MODE) Sleep(1000);
+        if (SLOW_MODE && !waiting) Sleep(1000);
         if (LOOP_MODE && iter * 24 > (N * (numFrames - 1) + 1)) iter = 0;
+        if (LOOP_TEST_MODE) {
+            if (!waiting && iter * 24 > (N * (numFrames - 1) + 1)) {
+                freeFrames(tweezerPositions, lTweezers, dTweezers, moves);
+                waiting = true;
+                waitTime = 0;
+                waitFrames = (WAIT_LOWER + (rand() % (WAIT_UPPER - WAIT_LOWER))) * REFRESH_RATE;
+            }
+            if (waiting && waitTime == waitFrames) {
+                waiting = false;
+                iter = 0;
+                numFrames = generateFrames(tweezerPositions, lTweezers, dTweezers, moves);
+            }
+            if (waiting && waitTime < waitFrames) {
+                glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+                glClear(GL_COLOR_BUFFER_BIT);
+                glfwSwapBuffers(window);
+                waitTime++;
+                continue;
+            }
+        }
 
         processInput(window);
-
-        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
 
         for (int i = 0; i < SCR_HEIGHT; i++)
         {
@@ -338,11 +403,11 @@ int main()
             for (int j = 0; j < 24 && (iter * 24) + j < (N * (numFrames - 1) + 1); j++) {
                 int x = (int)moves[i][(iter * 24) + j][0];
                 int y = (int)moves[i][(iter * 24) + j][1];
-                for (int dx = -5; dx <= 5; dx++) {
-                    for (int dy = -5; dy <= 5; dy++) {
-                        if (j < 8) textureArray[(x + dx) * SCR_WIDTH * 3 + (y + dy) * 3] += (GLubyte) pow(2, 7 - (j % 8));
-                        else if (j < 16) textureArray[(x + dx) * SCR_WIDTH * 3 + (y + dy) * 3 + 1] += (GLubyte) pow(2, 7 - (j % 8));
-                        else textureArray[(x + dx) * SCR_WIDTH * 3 + (y + dy) * 3 + 2] += (GLubyte) pow(2, 7 - (j % 8));
+                for (int dx = -3; dx <= 3; dx++) {
+                    for (int dy = -3; dy <= 3; dy++) {
+                        if (j < 8) textureArray[(x + dx) * SCR_WIDTH * 3 + (y + dy) * 3] += (GLubyte)pow(2, 7 - (j % 8));
+                        else if (j < 16) textureArray[(x + dx) * SCR_WIDTH * 3 + (y + dy) * 3 + 1] += (GLubyte)pow(2, 7 - (j % 8));
+                        else textureArray[(x + dx) * SCR_WIDTH * 3 + (y + dy) * 3 + 2] += (GLubyte)pow(2, 7 - (j % 8));
                     }
                 }
             }
