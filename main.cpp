@@ -1,6 +1,7 @@
-// To compile: mex -O main.cpp glad.c glfw3.lib -IC:\Users\qmspc\documents\MATLAB\DMD\Externals\include -LC:\Users\qmspc\documents\MATLAB\DMD\Externals\lib
-// To invoke: after compiling, run the testing script, and then call main repeatedly with apporpriate arguments (ex: main(200, 20, 20, array)).
-// To halt: run the "clear mex" command
+/* To compile: mex -O main.cpp glad.c glfw3.lib -IC:\Users\qmspc\documents\MATLAB\DMD\Externals\include -LC:\Users\qmspc\documents\MATLAB\DMD\Externals\lib
+   To invoke: after compiling, run the testing script, and then call main repeatedly with apporpriate arguments (ex: main(200, 20, 20, array, 1)). Note that init
+should be set to 1 for the first call to main() and to 0 for all subsequent calls. The first call will initialize the window and not dipslay any frames.
+   To halt: run the "clear mex" command; this will close the window. */
 
 #include "mex.hpp"
 #include "mexAdapter.hpp"
@@ -24,7 +25,7 @@ void framebuffer_size_callback(GLFWwindow * window, int width, int height);
 void processInput(GLFWwindow* window);
 int rowAlgorithm(int DMDRow, int DMDCol);
 int columnAlgorithm(int DMDRow, int DMDCol);
-int generateFrames(int numTweezeapplrs, int occupancyRows, int occupancyCols, int** tweezerPositions, int*** lTweezers, float*** dTweezers, float*** moves);
+int generateFrames(int numTweezers, int occupancyRows, int occupancyCols, int** tweezerPositions, int*** lTweezers, float*** dTweezers, float*** moves);
 void freeFrames(int** tweezerPositions, int*** lTweezers, float*** dTweezers, float*** moves);
 GLFWwindow* setUpWindow();
 
@@ -328,6 +329,9 @@ public:
         int occupancyRows = inputs[1][0];
         int occupancyCols = inputs[2][0];
         matlab::data::Array occupancyMatrix = inputs[3];
+        int init = inputs[4][0];
+
+        if (init == 1) return;
         
         // tweezerPositions: binary array defining starting positions of tweezers
         // lTweezers: Array defining time series of tweezer positions in lattice space.
