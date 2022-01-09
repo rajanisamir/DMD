@@ -1,4 +1,6 @@
-// To compile: mex -O main.cpp glad.c glfw3.lib -IC:\Users\qmspc\source\repos\DMD\Libraries\include -LC:\Users\qmspc\source\repos\DMD\Libraries\lib
+// To compile: mex -O main.cpp glad.c glfw3.lib -IC:\Users\qmspc\documents\MATLAB\DMD\Externals\include -LC:\Users\qmspc\documents\MATLAB\DMD\Externals\lib
+// To invoke: after compiling, run the testing script, and then call main repeatedly with apporpriate arguments (ex: main(200, 20, 20, array)).
+// To halt: run the "clear mex" command
 
 #include "mex.hpp"
 #include "mexAdapter.hpp"
