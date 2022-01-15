@@ -1,5 +1,5 @@
 /* To compile: mex -O main.cpp glad.c glfw3.lib -IC:\Users\qmspc\documents\MATLAB\DMD\Externals\include -LC:\Users\qmspc\documents\MATLAB\DMD\Externals\lib
-   To invoke: after compiling, run the testing script, and then call main repeatedly with apporpriate arguments (ex: main(200, 20, 20, array, 3, 50, 1)). Note that init
+   To invoke: after compiling, run the testing script, and then call main repeatedly with apporpriate arguments (ex: main(200, 20, 20, array, 3, 50, 8.66, 5, 8.66, -5, 570, 456, 1)). Note that init
 should be set to 1 for the first call to main() and to 0 for all subsequent calls. The first call will initialize the window and not dipslay any frames.
    To halt: run the "clear mex" command; this will close the window. */
 
@@ -39,36 +39,12 @@ const unsigned int SCR_HEIGHT = 912;
 const bool DMD_MODE = false;
 const bool WHITE_COLOR_MODE = false;
 
-// Tweezer configuration:
-    // MAX_TIME: The maximum number of total moves between lattice sites (defines the amouunt of memory to allocate in lTweezers).
+// MAX_TIME: The maximum number of total moves between lattice sites (defines the amouunt of memory to allocate in lTweezers).
 const int MAX_TIME = 40;
 
-// Lattice configuration: vec1, vec2, and center define the lattice coordinate system in DMD space.
-const float vec1[] = { 8.66, 5 };
-const float vec2[] = { 8.66, -5 };
-const float center[] = { SCR_WIDTH / 2, SCR_HEIGHT / 2 };
-
-void processInput(GLFWwindow* window)
-{
-    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-        glfwSetWindowShouldClose(window, true);
-}
-
-void framebuffer_size_callback(GLFWwindow* window, int width, int height)
-{
-    glViewport(0, 0, width, height);
-}
-
-int rowAlgorithm(int DMDRow, int DMDCol) {
-    return -DMDCol + (int)(DMDRow / 2);
-}
-
-int columnAlgorithm(int DMDRow, int DMDCol) {
-    return ((int)((DMDRow + 1) / 2)) + DMDCol;
-}
-
 // Generates frames in moves and returns the total number generated. Assumes tweezerPositions is populated with occupancy matrix.
-int generateFrames(int numTweezers, int occupancyRows, int occupancyCols, int** tweezerPositions, int*** lTweezers, float*** dTweezers, float*** moves, int N) {
+int generateFrames(int numTweezers, int occupancyRows, int occupancyCols, int** tweezerPositions, int*** lTweezers, float*** dTweezers, float*** moves, int N,
+                   float vec1X, float vec1Y, float vec2X, float vec2Y, float centerX, float centerY) {
     // Initialize lTweezers
     for (int i = 0; i < numTweezers; i++) {
         lTweezers[i] = new int* [MAX_TIME];
@@ -191,8 +167,8 @@ int generateFrames(int numTweezers, int occupancyRows, int occupancyCols, int** 
         for (int j = 0; j < numFrames; j++) {
             lTweezers[i][j][0] -= occupancyRows / 2;
             lTweezers[i][j][1] -= occupancyCols / 2;
-            dTweezers[i][j][0] = center[0] + (lTweezers[i][j][0] * vec1[0]) + (lTweezers[i][j][1] * vec2[0]);
-            dTweezers[i][j][1] = center[1] + (lTweezers[i][j][0] * vec1[1]) + (lTweezers[i][j][1] * vec2[1]);
+            dTweezers[i][j][0] = centerX + (lTweezers[i][j][0] * vec1X) + (lTweezers[i][j][1] * vec2X);
+            dTweezers[i][j][1] = centerY + (lTweezers[i][j][0] * vec1Y) + (lTweezers[i][j][1] * vec2Y);
         }
     }
 
@@ -251,6 +227,25 @@ GLFWwindow* setUpWindow() {
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
     return window;
+}
+
+void processInput(GLFWwindow* window)
+{
+    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+        glfwSetWindowShouldClose(window, true);
+}
+
+void framebuffer_size_callback(GLFWwindow* window, int width, int height)
+{
+    glViewport(0, 0, width, height);
+}
+
+int rowAlgorithm(int DMDRow, int DMDCol) {
+    return -DMDCol + (int)(DMDRow / 2);
+}
+
+int columnAlgorithm(int DMDRow, int DMDCol) {
+    return ((int)((DMDRow + 1) / 2)) + DMDCol;
 }
 
 class MexFunction : public matlab::mex::Function {
@@ -324,6 +319,23 @@ public:
         glfwTerminate();
     }
     
+    /* The MEX function operator() is invoked by calling main() in MATLAB with the following parameters:
+            (int) numTweezers: the total number of tweezers (i.e. the number of "1" values in the occupancy matrix
+            (int) occupancyRows: the number of rows in the occupancy matrix
+            (int) occupancyCols: the number of columns in the occupancy matrix
+            (int array) occupancyMatrix: a one-dimensional matrix consisting of values "0" and "1"; converted to a 2D
+                        matrix using the values specified by occupancyRows and occupancyCols
+            (int) tweezerSize: the side length of the square defining the size of a tweezer, in pixels
+            (int) N: the smoothing factor specifying how many frames should be included between consecutive lattice sites
+            (float) vec1X: the x-component of the first vector specifying the lattice orientation in DMD space
+            (float) vec1Y: the y-component of the first vector specifying the lattice orientation in DMD space
+            (float) vec2X: the x-component of the second vector specifying the lattice orientation in DMD space
+            (float) vec2Y: the y-component of the second vector specifying the lattice orientation in DMD space
+            (float) centerX: the x-component of the center of the lattice in DMD space
+            (float) centerY: the y-component of the center of the lattice in DMD space
+            (int) init: should be set to 1 for the first call to operator and to 0 for all subsequent calls
+     */
+
     void operator() (matlab::mex::ArgumentList outputs, matlab::mex::ArgumentList inputs) {
         int numTweezers = inputs[0][0];
         int occupancyRows = inputs[1][0];
@@ -331,7 +343,15 @@ public:
         matlab::data::Array occupancyMatrix = inputs[3];
         int tweezerSize = inputs[4][0];
         int N = inputs[5][0];
-        int init = inputs[6][0];
+        
+        // Lattice configuration: vec1, vec2, and center define the lattice coordinate system in DMD space.
+        float vec1X = inputs[6][0];
+        float vec1Y = inputs[7][0];
+        float vec2X = inputs[8][0];
+        float vec2Y = inputs[9][0];
+        float centerX = inputs[10][0];
+        float centerY = inputs[11][0];
+        int init = inputs[12][0];
 
         if (init == 1) return;
        
@@ -351,7 +371,8 @@ public:
             }
         }
         
-        int numFrames = generateFrames(numTweezers, occupancyRows, occupancyCols, tweezerPositions, lTweezers, dTweezers, moves, N);
+        int numFrames = generateFrames(numTweezers, occupancyRows, occupancyCols, tweezerPositions, lTweezers, dTweezers, moves, N,
+                                       vec1X, vec1Y, vec2X, vec2Y, centerX, centerY);
 
         GLubyte* textureArray = new GLubyte[SCR_WIDTH * SCR_HEIGHT * 3];
         GLubyte* dmdTextureArray = new GLubyte[SCR_WIDTH * SCR_HEIGHT * 3];
