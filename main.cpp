@@ -36,8 +36,10 @@ const unsigned int SCR_HEIGHT = 912;
 // Configuration flags:
     // DMD_MODE: Requires a secondary monitor to be connected and sends frames to this monitor.
     // WHITE_COLOR_MODE: Performs all computations as normal, but displays white when frames would normally be displayed.
+    // INVERTED_COLOR_MODE: For each binary frame, flip all black pixels to white and all white pixels to black.
 const bool DMD_MODE = false;
 const bool WHITE_COLOR_MODE = false;
+const bool INVERTED_COLOR_MODE = false;
 
 // MAX_TIME: The maximum number of total moves between lattice sites (defines the amouunt of memory to allocate in lTweezers).
 const int MAX_TIME = 40;
@@ -388,15 +390,17 @@ public:
                 return;
             }
             else {
+                GLubyte defaultPixelColor = INVERTED_COLOR_MODE ? 255 : 0;
+
                 for (int i = 0; i < SCR_HEIGHT; i++)
                 {
                     for (int j = 0; j < SCR_WIDTH; j++) {
-                        textureArray[i * SCR_WIDTH * 3 + j * 3] = (GLubyte)0;
-                        textureArray[i * SCR_WIDTH * 3 + j * 3 + 1] = (GLubyte)0;
-                        textureArray[i * SCR_WIDTH * 3 + j * 3 + 2] = (GLubyte)0;
-                        dmdTextureArray[i * SCR_WIDTH * 3 + j * 3] = (GLubyte)0;
-                        dmdTextureArray[i * SCR_WIDTH * 3 + j * 3 + 1] = (GLubyte)0;
-                        dmdTextureArray[i * SCR_WIDTH * 3 + j * 3 + 2] = (GLubyte)0;
+                        textureArray[i * SCR_WIDTH * 3 + j * 3] = defaultPixelColor;
+                        textureArray[i * SCR_WIDTH * 3 + j * 3 + 1] = defaultPixelColor;
+                        textureArray[i * SCR_WIDTH * 3 + j * 3 + 2] = defaultPixelColor;
+                        dmdTextureArray[i * SCR_WIDTH * 3 + j * 3] = defaultPixelColor;
+                        dmdTextureArray[i * SCR_WIDTH * 3 + j * 3 + 1] = defaultPixelColor;
+                        dmdTextureArray[i * SCR_WIDTH * 3 + j * 3 + 2] = defaultPixelColor;
                     }
                 }
 
@@ -410,9 +414,10 @@ public:
                                 if (x + dx < 0 || y + dy < 0) {
                                     break;
                                 }
-                                if (j < 8) textureArray[(x + dx) * SCR_WIDTH * 3 + (y + dy) * 3] += (GLubyte)pow(2, 7 - (j % 8));
-                                else if (j < 16) textureArray[(x + dx) * SCR_WIDTH * 3 + (y + dy) * 3 + 1] += (GLubyte)pow(2, 7 - (j % 8));
-                                else textureArray[(x + dx) * SCR_WIDTH * 3 + (y + dy) * 3 + 2] += (GLubyte)pow(2, 7 - (j % 8));
+                                GLubyte flipped = INVERTED_COLOR_MODE ? -1 : 1;
+                                if (j < 8) textureArray[(x + dx) * SCR_WIDTH * 3 + (y + dy) * 3] += (GLubyte)pow(2, 7 - (j % 8)) * flipped;
+                                else if (j < 16) textureArray[(x + dx) * SCR_WIDTH * 3 + (y + dy) * 3 + 1] += (GLubyte)pow(2, 7 - (j % 8)) * flipped;
+                                else textureArray[(x + dx) * SCR_WIDTH * 3 + (y + dy) * 3 + 2] += (GLubyte)pow(2, 7 - (j % 8)) * flipped;
                             }
                         }
                     }
