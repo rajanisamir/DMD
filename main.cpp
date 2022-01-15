@@ -1,5 +1,5 @@
 /* To compile: mex -O main.cpp glad.c glfw3.lib -IC:\Users\qmspc\documents\MATLAB\DMD\Externals\include -LC:\Users\qmspc\documents\MATLAB\DMD\Externals\lib
-   To invoke: after compiling, run the testing script, and then call main repeatedly with apporpriate arguments (ex: main(200, 20, 20, array, 3, 1)). Note that init
+   To invoke: after compiling, run the testing script, and then call main repeatedly with apporpriate arguments (ex: main(200, 20, 20, array, 3, 50, 1)). Note that init
 should be set to 1 for the first call to main() and to 0 for all subsequent calls. The first call will initialize the window and not dipslay any frames.
    To halt: run the "clear mex" command; this will close the window. */
 
@@ -25,7 +25,7 @@ void framebuffer_size_callback(GLFWwindow * window, int width, int height);
 void processInput(GLFWwindow* window);
 int rowAlgorithm(int DMDRow, int DMDCol);
 int columnAlgorithm(int DMDRow, int DMDCol);
-int generateFrames(int numTweezers, int occupancyRows, int occupancyCols, int** tweezerPositions, int*** lTweezers, float*** dTweezers, float*** moves);
+int generateFrames(int numTweezers, int occupancyRows, int occupancyCols, int** tweezerPositions, int*** lTweezers, float*** dTweezers, float*** moves, int N);
 void freeFrames(int** tweezerPositions, int*** lTweezers, float*** dTweezers, float*** moves);
 GLFWwindow* setUpWindow();
 
@@ -70,7 +70,7 @@ int columnAlgorithm(int DMDRow, int DMDCol) {
 }
 
 // Generates frames in moves and returns the total number generated. Assumes tweezerPositions is populated with occupancy matrix.
-int generateFrames(int numTweezers, int occupancyRows, int occupancyCols, int** tweezerPositions, int*** lTweezers, float*** dTweezers, float*** moves) {
+int generateFrames(int numTweezers, int occupancyRows, int occupancyCols, int** tweezerPositions, int*** lTweezers, float*** dTweezers, float*** moves, int N) {
     // Initialize lTweezers
     for (int i = 0; i < numTweezers; i++) {
         lTweezers[i] = new int* [MAX_TIME];
@@ -332,7 +332,8 @@ public:
         int occupancyCols = inputs[2][0];
         matlab::data::Array occupancyMatrix = inputs[3];
         int tweezerSize = inputs[4][0];
-        int init = inputs[5][0];
+        int N = inputs[5][0];
+        int init = inputs[6][0];
 
         if (init == 1) return;
        
@@ -352,7 +353,7 @@ public:
             }
         }
         
-        int numFrames = generateFrames(numTweezers, occupancyRows, occupancyCols, tweezerPositions, lTweezers, dTweezers, moves);
+        int numFrames = generateFrames(numTweezers, occupancyRows, occupancyCols, tweezerPositions, lTweezers, dTweezers, moves, N);
 
         GLubyte* textureArray = new GLubyte[SCR_WIDTH * SCR_HEIGHT * 3];
         GLubyte* dmdTextureArray = new GLubyte[SCR_WIDTH * SCR_HEIGHT * 3];
