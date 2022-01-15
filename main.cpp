@@ -41,9 +41,7 @@ const bool WHITE_COLOR_MODE = false;
 
 // Tweezer configuration:
     // MAX_TIME: The maximum number of total moves between lattice sites (defines the amouunt of memory to allocate in lTweezers).
-    // N: Smoothing factor defining the number of binary frames that should be generated for a move between two consecutive lattice sites.
 const int MAX_TIME = 40;
-const int N = 50;
 
 // Lattice configuration: vec1, vec2, and center define the lattice coordinate system in DMD space.
 const float vec1[] = { 8.66, 5 };
