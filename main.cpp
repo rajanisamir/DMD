@@ -1,5 +1,5 @@
 /* To compile: mex -O main.cpp glad.c glfw3.lib -IC:\Users\qmspc\documents\MATLAB\DMD\Externals\include -LC:\Users\qmspc\documents\MATLAB\DMD\Externals\lib
-   To invoke: after compiling, run the testing script, and then call main repeatedly with apporpriate arguments (ex: main(200, 20, 20, array, 1)). Note that init
+   To invoke: after compiling, run the testing script, and then call main repeatedly with apporpriate arguments (ex: main(200, 20, 20, array, 3, 1)). Note that init
 should be set to 1 for the first call to main() and to 0 for all subsequent calls. The first call will initialize the window and not dipslay any frames.
    To halt: run the "clear mex" command; this will close the window. */
 
@@ -331,7 +331,8 @@ public:
         int occupancyRows = inputs[1][0];
         int occupancyCols = inputs[2][0];
         matlab::data::Array occupancyMatrix = inputs[3];
-        int init = inputs[4][0];
+        int tweezerSize = inputs[4][0];
+        int init = inputs[5][0];
 
         if (init == 1) return;
        
@@ -384,8 +385,8 @@ public:
                     for (int j = 0; j < 24 && (iter * 24) + j < (N * (numFrames - 1) + 1); j++) {
                         int x = (int)moves[i][(iter * 24) + j][0];
                         int y = (int)moves[i][(iter * 24) + j][1];
-                        for (int dx = -3; dx <= 3; dx++) {
-                            for (int dy = -3; dy <= 3; dy++) {
+                        for (int dx = -tweezerSize; dx <= tweezerSize; dx++) {
+                            for (int dy = -tweezerSize; dy <= tweezerSize; dy++) {
                                 if (x + dx < 0 || y + dy < 0) {
                                     break;
                                 }
