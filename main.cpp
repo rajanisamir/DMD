@@ -35,7 +35,9 @@ const unsigned int SCR_HEIGHT = 912;
 
 // Configuration flags:
     // DMD_MODE: Requires a secondary monitor to be connected and sends frames to this monitor.
+    // WHITE_COLOR_MODE: Performs all computations as normal, but displays white when frames would normally be displayed.
 const bool DMD_MODE = false;
+const bool WHITE_COLOR_MODE = false;
 
 // Tweezer configuration:
     // MAX_TIME: The maximum number of total moves between lattice sites (defines the amouunt of memory to allocate in lTweezers).
@@ -332,7 +334,7 @@ public:
         int init = inputs[4][0];
 
         if (init == 1) return;
-        
+       
         // tweezerPositions: binary array defining starting positions of tweezers
         // lTweezers: Array defining time series of tweezer positions in lattice space.
         // dTweezers: Array defining time series of tweezer positions in DMD space, computed using lattice configuration parameters (vec1, vec2, center).
@@ -407,15 +409,25 @@ public:
                         }
                     }
                 }
-
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, dmdTextureArray);
-
-                glGenerateMipmap(GL_TEXTURE_2D);
-
-                ourShader->use();
-                glBindVertexArray(VAO);
-                glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-
+                
+                if (WHITE_COLOR_MODE) {
+                    if (iter * 24 > (N * (numFrames - 1) + 1)) {
+                        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+                    }
+                    else {
+                        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+                    }
+                    glClear(GL_COLOR_BUFFER_BIT);
+                }
+                
+                else {
+                    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, dmdTextureArray);
+                    glGenerateMipmap(GL_TEXTURE_2D);
+                    ourShader->use();
+                    glBindVertexArray(VAO);
+                    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+                }
+                
                 glfwSwapBuffers(window);
 
                 iter++;
