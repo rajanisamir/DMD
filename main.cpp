@@ -41,7 +41,7 @@ const unsigned int SCR_HEIGHT = 912;
     // DMD_MODE: Requires a secondary monitor to be connected and sends frames to this monitor.
     // WHITE_COLOR_MODE: Performs all computations as normal, but displays white when frames would normally be displayed.
     // INVERTED_COLOR_MODE: For each binary frame, flip all black pixels to white and all white pixels to black.
-const bool DMD_MODE = false;
+const bool DMD_MODE = true;
 const bool WHITE_COLOR_MODE = false;
 const bool INVERTED_COLOR_MODE = false;
 
@@ -234,6 +234,7 @@ GLFWwindow* setUpWindow() {
             std::cout << "DMD Not Connected" << std::endl;
             return NULL;
         }
+        glfwWindowHint(GLFW_AUTO_ICONIFY, GLFW_FALSE);
         window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "DMD Test Window", monitors[1], NULL);
     }
     else window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "DMD Test Window", NULL, NULL);
@@ -427,6 +428,7 @@ public:
                         int y = (int)moves[i][(iter * 24) + j][1];
                         for (int dx = -tweezerSize; dx <= tweezerSize; dx++) {
                             for (int dy = -tweezerSize; dy <= tweezerSize; dy++) {
+                                // check for going off bottom-right as well as top-left
                                 if (x + dx < 0 || y + dy < 0) {
                                     break;
                                 }
