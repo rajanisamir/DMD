@@ -43,7 +43,7 @@ const unsigned int SCR_HEIGHT = 912;
     // INVERTED_COLOR_MODE: For each binary frame, flip all black pixels to white and all white pixels to black.
 const bool DMD_MODE = true;
 const bool WHITE_COLOR_MODE = false;
-const bool INVERTED_COLOR_MODE = false;
+const bool INVERTED_COLOR_MODE = true;
 
 // Configure memory allocation:
     // MAX_TIME: The expected maximum number of total moves between lattice sites (defines the amouunt of memory to allocate for frame generation):
@@ -427,11 +427,9 @@ public:
                         int x = (int)moves[i][(iter * 24) + j][0];
                         int y = (int)moves[i][(iter * 24) + j][1];
                         for (int dx = -tweezerSize; dx <= tweezerSize; dx++) {
+                            if (x + dx < 0 || x + dx > SCR_HEIGHT) continue;
                             for (int dy = -tweezerSize; dy <= tweezerSize; dy++) {
-                                // check for going off bottom-right as well as top-left
-                                if (x + dx < 0 || y + dy < 0) {
-                                    break;
-                                }
+                                if (y + dy < 0 || y + dy > SCR_WIDTH) continue;
                                 GLubyte flipped = INVERTED_COLOR_MODE ? -1 : 1;
                                 if (j < 8) textureArray[(x + dx) * SCR_WIDTH * 3 + (y + dy) * 3] += (GLubyte)pow(2, 7 - (j % 8)) * flipped;
                                 else if (j < 16) textureArray[(x + dx) * SCR_WIDTH * 3 + (y + dy) * 3 + 1] += (GLubyte)pow(2, 7 - (j % 8)) * flipped;
