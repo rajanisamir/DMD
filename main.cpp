@@ -49,6 +49,15 @@ const bool INVERTED_COLOR_MODE = true;
     // MAX_TIME: The expected maximum number of total moves between lattice sites (defines the amouunt of memory to allocate for frame generation):
 const int MAX_TIME = 40;
 
+// Configure tweezer pattern:
+    // TWEEZER_PATTERN: A 2D array specifying the shape of a tweezer for drawing on the screen based on deviations from the center in the x- and y- directions.
+const int TWEEZER_PATTERN[13][2] = {
+                       {0, 2},
+             {-1, 1},  {0, 1},  {1, 1},
+    {-2, 0}, {-1, 0},  {0, 0},  {1, 0}, {2, 0},
+             {-1, -1}, {0, -1}, {1, -1},
+                       {0, -2}
+};
 
 /* Functions for window creation and frame generation */
 
@@ -210,8 +219,35 @@ int generateFrames(int numTweezers, int occupancyRows, int occupancyCols, int** 
 }
 
 // freeFrames: Frees the memory associated with frame generation.
-void freeFrames(int** tweezerPositions, int*** lTweezers, float*** dTweezers, float*** moves) {
-    // TODO: IMPLEMENT THIS
+void freeFrames(int numTweezers, int N, int occupancyRows, int occupancyCols, int** tweezerPositions, int*** lTweezers, float*** dTweezers, float*** moves) {
+    for (int i = 0; i < occupancyRows; i++) {
+        delete[] tweezerPositions[i];
+    }
+    delete[] tweezerPositions;
+    
+    for (int i = 0; i < numTweezers; i++) {
+        for (int j = 0; j < MAX_TIME; j++) {
+            delete[] lTweezers[i][j];
+        }
+        delete[] lTweezers[i];
+    }
+    delete[] lTweezers;
+
+    for (int i = 0; i < numTweezers; i++) {
+        for (int j = 0; j < MAX_TIME; j++) {
+            delete[] dTweezers[i][j];
+        }
+        delete[] dTweezers[i];
+    }
+    delete[] dTweezers;
+
+    for (int i = 0; i < numTweezers; i++) {
+        for (int j = 0; j < N * (MAX_TIME - 1) + 1; j++) {
+            delete[] moves[i][j];
+        }
+        delete[] moves[i];
+    }
+    delete[] moves;
 }
 
 // setUpWindow: sets up a window using GLFW and returns a pointer to the window. Returns NULL on failure.
@@ -400,7 +436,7 @@ public:
         
         while (!glfwWindowShouldClose(window)) {
             if (iter * 24 > (N * (numFrames - 1) + 1)) {
-//              freeFrames(tweezerPositions, lTweezers, dTweezers, moves);
+                freeFrames(numTweezers, N, occupancyRows, occupancyCols, tweezerPositions, lTweezers, dTweezers, moves);
                 glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
                 glClear(GL_COLOR_BUFFER_BIT);
                 glfwSwapBuffers(window);
@@ -426,6 +462,20 @@ public:
                     for (int j = 0; j < 24 && (iter * 24) + j < (N * (numFrames - 1) + 1); j++) {
                         int x = (int)moves[i][(iter * 24) + j][0];
                         int y = (int)moves[i][(iter * 24) + j][1];
+                        /*
+                        for (int i = 0; i < sizeof(TWEEZER_PATTERN)/sizeof(int*); i++) {
+                            int dx = TWEEZER_PATTERN[i][0];
+                            int dy = TWEEZER_PATTERN[i][1];
+                            if (x + dx < 0 || y + dy < 0 || x + dx > SCR_HEIGHT || y + dy > SCR_WIDTH) {
+                                continue;
+                            }
+                            GLubyte flipped = INVERTED_COLOR_MODE ? -1 : 1;
+                            if (j < 8) textureArray[(x + dx) * SCR_WIDTH * 3 + (y + dy) * 3] += (GLubyte)pow(2, 7 - (j % 8)) * flipped;
+                            else if (j < 16) textureArray[(x + dx) * SCR_WIDTH * 3 + (y + dy) * 3 + 1] += (GLubyte)pow(2, 7 - (j % 8)) * flipped;
+                            else textureArray[(x + dx) * SCR_WIDTH * 3 + (y + dy) * 3 + 2] += (GLubyte)pow(2, 7 - (j % 8)) * flipped;
+                        }
+                        */
+                        
                         for (int dx = -tweezerSize; dx <= tweezerSize; dx++) {
                             if (x + dx < 0 || x + dx > SCR_HEIGHT) continue;
                             for (int dy = -tweezerSize; dy <= tweezerSize; dy++) {
@@ -435,7 +485,7 @@ public:
                                 else if (j < 16) textureArray[(x + dx) * SCR_WIDTH * 3 + (y + dy) * 3 + 1] += (GLubyte)pow(2, 7 - (j % 8)) * flipped;
                                 else textureArray[(x + dx) * SCR_WIDTH * 3 + (y + dy) * 3 + 2] += (GLubyte)pow(2, 7 - (j % 8)) * flipped;
                             }
-                        }
+                        }    
                     }
                 }
 
