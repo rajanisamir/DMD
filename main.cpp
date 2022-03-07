@@ -42,7 +42,7 @@ const unsigned int SCR_HEIGHT = 912;
     // WHITE_COLOR_MODE: Performs all computations as normal, but displays white when frames would normally be displayed.
     // INVERTED_COLOR_MODE: For each binary frame, flip all black pixels to white and all white pixels to black.
 const bool DMD_MODE = true;
-const bool WHITE_COLOR_MODE = false;
+const bool WHITE_COLOR_MODE = true;
 const bool INVERTED_COLOR_MODE = true;
 
 // Configure memory allocation:
@@ -507,7 +507,7 @@ public:
                         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
                     }
                     else {
-                        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+                        glClearColor(0.666667f, 0.666667f, 0.666667f, 1.0f);
                     }
                     glClear(GL_COLOR_BUFFER_BIT);
                 }
