@@ -473,80 +473,77 @@ public:
                 }
 
 
-                // Take the next 24 binary frames and generate an RGB image.
+                // Take the first binary frame and generate an image.
                 for (int i = 0; i < numTweezers; i++) {
-                    for (int j = 0; j < 24 && (iter * 24) + j < (N * (numFrames - 1) + 1); j++) {
-                        int x = (int)moves[i][(iter * 24) + j][0];
-                        int y = (int)moves[i][(iter * 24) + j][1];
-                        /*
-                        for (int i = 0; i < sizeof(TWEEZER_PATTERN)/sizeof(int*); i++) {
-                            int dx = TWEEZER_PATTERN[i][0];
-                            int dy = TWEEZER_PATTERN[i][1];
-                            if (x + dx < 0 || y + dy < 0 || x + dx > SCR_HEIGHT || y + dy > SCR_WIDTH) {
-                                continue;
-                            }
-                            GLubyte flipped = INVERTED_COLOR_MODE ? -1 : 1;
-                            if (j < 8) textureArray[(x + dx) * SCR_WIDTH * 3 + (y + dy) * 3] += (GLubyte)pow(2, 7 - (j % 8)) * flipped;
-                            else if (j < 16) textureArray[(x + dx) * SCR_WIDTH * 3 + (y + dy) * 3 + 1] += (GLubyte)pow(2, 7 - (j % 8)) * flipped;
-                            else textureArray[(x + dx) * SCR_WIDTH * 3 + (y + dy) * 3 + 2] += (GLubyte)pow(2, 7 - (j % 8)) * flipped;
+                    int x = (int)moves[i][0][0];
+                    int y = (int)moves[i][0][1];
+                    /*
+                    for (int i = 0; i < sizeof(TWEEZER_PATTERN)/sizeof(int*); i++) {
+                        int dx = TWEEZER_PATTERN[i][0];
+                        int dy = TWEEZER_PATTERN[i][1];
+                        if (x + dx < 0 || y + dy < 0 || x + dx > SCR_HEIGHT || y + dy > SCR_WIDTH) {
+                            continue;
                         }
-                        */
-                        
-                        for (int dx = -tweezerSize; dx <= tweezerSize; dx++) {
-                            if (x + dx < 0 || x + dx > SCR_HEIGHT) continue;
-                            for (int dy = -tweezerSize; dy <= tweezerSize; dy++) {
-                                if (y + dy < 0 || y + dy > SCR_WIDTH) continue;
-                                GLubyte flipped = INVERTED_COLOR_MODE ? -1 : 1;
-                                if (j < 8) textureArray[(x + dx) * SCR_WIDTH * 3 + (y + dy) * 3] += (GLubyte)pow(2, 7 - (j % 8)) * flipped;
-                                else if (j < 16) textureArray[(x + dx) * SCR_WIDTH * 3 + (y + dy) * 3 + 1] += (GLubyte)pow(2, 7 - (j % 8)) * flipped;
-                                else textureArray[(x + dx) * SCR_WIDTH * 3 + (y + dy) * 3 + 2] += (GLubyte)pow(2, 7 - (j % 8)) * flipped;
-                            }
-                        }    
+                        GLubyte flipped = INVERTED_COLOR_MODE ? -1 : 1;
+                        if (j < 8) textureArray[(x + dx) * SCR_WIDTH * 3 + (y + dy) * 3] += (GLubyte)pow(2, 7 - (j % 8)) * flipped;
+                        else if (j < 16) textureArray[(x + dx) * SCR_WIDTH * 3 + (y + dy) * 3 + 1] += (GLubyte)pow(2, 7 - (j % 8)) * flipped;
+                        else textureArray[(x + dx) * SCR_WIDTH * 3 + (y + dy) * 3 + 2] += (GLubyte)pow(2, 7 - (j % 8)) * flipped;
+                    }
+                    */
+                    
+                    for (int dx = -tweezerSize; dx <= tweezerSize; dx++) {
+                        if (x + dx < 0 || x + dx > SCR_HEIGHT) continue;
+                        for (int dy = -tweezerSize; dy <= tweezerSize; dy++) {
+                            if (y + dy < 0 || y + dy > SCR_WIDTH) continue;
+                            textureArray[(x + dx) * SCR_WIDTH * 3 + (y + dy) * 3] = INVERTED_COLOR_MODE ? 0 : 255;
+                            textureArray[(x + dx) * SCR_WIDTH * 3 + (y + dy) * 3 + 1] = INVERTED_COLOR_MODE ? 0 : 255;
+                            textureArray[(x + dx) * SCR_WIDTH * 3 + (y + dy) * 3 + 2] = INVERTED_COLOR_MODE ? 0 : 255;
+                        }
+                    }    
+                }
+            }
+
+            // Populate dmdTextureArray with textureArray in DMD coordinate system by using rowAlgorithm() and columnAlgorithm().
+            for (int i = 0; i < SCR_HEIGHT; i++) {
+                for (int j = 0; j < SCR_WIDTH; j++) {
+                    int x = 607 + rowAlgorithm(i, j);
+                    int y = columnAlgorithm(i, j);
+                    if (x < SCR_HEIGHT && y < SCR_WIDTH) {
+                        dmdTextureArray[i * SCR_WIDTH * 3 + j * 3] = textureArray[x * SCR_WIDTH * 3 + y * 3];
+                        dmdTextureArray[i * SCR_WIDTH * 3 + j * 3 + 1] = textureArray[x * SCR_WIDTH * 3 + y * 3 + 1];
+                        dmdTextureArray[i * SCR_WIDTH * 3 + j * 3 + 2] = textureArray[x * SCR_WIDTH * 3 + y * 3 + 2];
                     }
                 }
+            }
 
-                // Populate dmdTextureArray with textureArray in DMD coordinate system by using rowAlgorithm() and columnAlgorithm().
-                for (int i = 0; i < SCR_HEIGHT; i++) {
-                    for (int j = 0; j < SCR_WIDTH; j++) {
-                        int x = 607 + rowAlgorithm(i, j);
-                        int y = columnAlgorithm(i, j);
-                        if (x < SCR_HEIGHT && y < SCR_WIDTH) {
-                            dmdTextureArray[i * SCR_WIDTH * 3 + j * 3] = textureArray[x * SCR_WIDTH * 3 + y * 3];
-                            dmdTextureArray[i * SCR_WIDTH * 3 + j * 3 + 1] = textureArray[x * SCR_WIDTH * 3 + y * 3 + 1];
-                            dmdTextureArray[i * SCR_WIDTH * 3 + j * 3 + 2] = textureArray[x * SCR_WIDTH * 3 + y * 3 + 2];
-                        }
-                    }
+            auto t2_for = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+            
+            // std::cout << "Texture array population time: " << t2_for - t1_for << " ms" << "\n";
+            
+            if (WHITE_COLOR_MODE) {
+                if (iter * 24 > (N * (numFrames - 1) + 1)) {
+                    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
                 }
-
-                auto t2_for = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
-                
-                // std::cout << "Texture array population time: " << t2_for - t1_for << " ms" << "\n";
-                
-                if (WHITE_COLOR_MODE) {
-                    if (iter * 24 > (N * (numFrames - 1) + 1)) {
-                        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-                    }
 //                     else {
 //                         glClearColor(0.666667f, 0.666667f, 0.666667f, 1.0f);
 //                     }
-                    glClear(GL_COLOR_BUFFER_BIT);
-                }
-                
-                else {
-                    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, dmdTextureArray);
-                    glGenerateMipmap(GL_TEXTURE_2D);
-                    ourShader->use();
-                    glBindVertexArray(VAO);
-                    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-                }
-                
-                glfwSwapBuffers(window);
-
-                iter++;
+                glClear(GL_COLOR_BUFFER_BIT);
             }
+            
+            else {
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, dmdTextureArray);
+                glGenerateMipmap(GL_TEXTURE_2D);
+                ourShader->use();
+                glBindVertexArray(VAO);
+                glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+            }
+            
+            glfwSwapBuffers(window);
 
-            glfwPollEvents();
-            processInput(window);
+            // iter++;
         }
+
+        glfwPollEvents();
+        processInput(window);
     }
 };
