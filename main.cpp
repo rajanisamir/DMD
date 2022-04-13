@@ -1,5 +1,5 @@
 /* To compile: mex -O main.cpp glad.c glfw3.lib -IC:\Users\qmspc\documents\MATLAB\DMD\Externals\include -LC:\Users\qmspc\documents\MATLAB\DMD\Externals\lib
-   To invoke: after compiling, run the testing script, and then call main repeatedly with apporpriate arguments (ex: main(200, 20, 20, array, 3, 50, 8.66, 5, 8.66, -5, 570, 456, 1)). Note that init
+   To invoke: after compiling, run the testing script, and then call main repeatedly with apporpriate arguments (ex: main(98, 14, 14, array, 3, 10, 8.66, 5, 8.66, -5, 570, 456, 1)). Note that init
 should be set to 1 for the first call to main() and to 0 for all subsequent calls. The first call will initialize the window and not dipslay any frames.
    To halt: run the "clear mex" command; this will close the window. */
 
@@ -21,6 +21,11 @@ should be set to 1 for the first call to main() and to 0 for all subsequent call
 using namespace matlab::data;
 using matlab::mex::ArgumentList;
 
+using std::chrono::duration_cast;
+using std::chrono::milliseconds;
+using std::chrono::seconds;
+using std::chrono::system_clock;
+
 void framebuffer_size_callback(GLFWwindow * window, int width, int height);
 void processInput(GLFWwindow* window);
 int rowAlgorithm(int DMDRow, int DMDCol);
@@ -34,15 +39,15 @@ GLFWwindow* setUpWindow();
 // Configure DMD screen size:
     // SCR_WIDTH: width of the DMD screen, in pixels
     // SCR_HEIGHT: height of the DMD screen, in pixels
-const unsigned int SCR_WIDTH = 1140;
-const unsigned int SCR_HEIGHT = 912;
+const unsigned int SCR_WIDTH = 912;
+const unsigned int SCR_HEIGHT = 1140;
 
 // Configure several modes of operation:
     // DMD_MODE: Requires a secondary monitor to be connected and sends frames to this monitor.
     // WHITE_COLOR_MODE: Performs all computations as normal, but displays white when frames would normally be displayed.
     // INVERTED_COLOR_MODE: For each binary frame, flip all black pixels to white and all white pixels to black.
-const bool DMD_MODE = true;
-const bool WHITE_COLOR_MODE = true;
+const bool DMD_MODE = false;
+const bool WHITE_COLOR_MODE = false;
 const bool INVERTED_COLOR_MODE = true;
 
 // Configure memory allocation:
@@ -398,6 +403,8 @@ public:
      */
 
     void operator() (matlab::mex::ArgumentList outputs, matlab::mex::ArgumentList inputs) {
+        auto t1 = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+
         int numTweezers = inputs[0][0];
         int occupancyRows = inputs[1][0];
         int occupancyCols = inputs[2][0];
@@ -425,9 +432,15 @@ public:
                 tweezerPositions[i][j] = occupancyMatrix[i * occupancyCols + j];
             }
         }
-        
+
+
         int numFrames = generateFrames(numTweezers, occupancyRows, occupancyCols, tweezerPositions, lTweezers, dTweezers, moves, N,
                                        vec1X, vec1Y, vec2X, vec2Y, centerX, centerY);
+
+        
+        auto t2 = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+        
+        // std::cout << "Frame generation time: " << t2 - t1 << " ms" << "\n";
 
         GLubyte* textureArray = new GLubyte[SCR_WIDTH * SCR_HEIGHT * 3];
         GLubyte* dmdTextureArray = new GLubyte[SCR_WIDTH * SCR_HEIGHT * 3];
@@ -445,6 +458,8 @@ public:
             else {
                 GLubyte defaultPixelColor = INVERTED_COLOR_MODE ? 255 : 0;
 
+                auto t1_for = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+
                 for (int i = 0; i < SCR_HEIGHT; i++)
                 {
                     for (int j = 0; j < SCR_WIDTH; j++) {
@@ -456,6 +471,7 @@ public:
                         dmdTextureArray[i * SCR_WIDTH * 3 + j * 3 + 2] = defaultPixelColor;
                     }
                 }
+
 
                 // Take the next 24 binary frames and generate an RGB image.
                 for (int i = 0; i < numTweezers; i++) {
@@ -501,14 +517,18 @@ public:
                         }
                     }
                 }
+
+                auto t2_for = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+                
+                // std::cout << "Texture array population time: " << t2_for - t1_for << " ms" << "\n";
                 
                 if (WHITE_COLOR_MODE) {
                     if (iter * 24 > (N * (numFrames - 1) + 1)) {
                         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
                     }
-                    else {
-                        glClearColor(0.666667f, 0.666667f, 0.666667f, 1.0f);
-                    }
+//                     else {
+//                         glClearColor(0.666667f, 0.666667f, 0.666667f, 1.0f);
+//                     }
                     glClear(GL_COLOR_BUFFER_BIT);
                 }
                 
